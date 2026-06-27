@@ -283,8 +283,10 @@ def main():
             
         print(f"\n✅ 成功将 Git Clone 任务提交到后台！")
         print(f"👉 即使立刻断开 SSH 或者网络波动，后台进程会自动重试。")
-        print(f"🔍 如果你想查看实时进度，请运行命令:")
+        print(f"🔍 如果你想查看实时日志，请运行命令:")
         print(f"   tail -f {log_file}")
+        print(f"📦 或者查看已下载的文件夹大小:")
+        print(f"   watch -n 2 du -sh {target_dir}")
         print("\n再见！👋")
         sys.exit(0)
         
@@ -383,8 +385,10 @@ def main():
             
         print(f"\n✅ 成功将 Hugging Face 下载任务提交到后台！")
         print(f"👉 即使你立刻断开 SSH，下载也会稳健执行。")
-        print(f"🔍 如果你想查看实时下载进度，请运行命令:")
+        print(f"🔍 如果你想查看报错/运行日志，请运行命令:")
         print(f"   tail -f {log_file}")
+        print(f"📦 由于后台无终端，进度条会被隐藏。请使用以下命令实时查看已下载的缓存大小:")
+        print(f"   watch -n 2 du -sh {target_dir}/.cache")
         print("\n再见！👋")
         sys.exit(0)
         
