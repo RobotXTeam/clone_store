@@ -10,7 +10,16 @@ from pathlib import Path
 from huggingface_hub import HfApi, login, hf_hub_url
 
 # ==== 代理强制配置 ====
-PROXY_URL = "http://127.0.0.1:7890"
+def get_proxy_port():
+    import socket
+    for port in [7897, 7890, 20171, 10809, 2080]:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(0.5)
+            if s.connect_ex(('127.0.0.1', port)) == 0:
+                return port
+    return 7890
+
+PROXY_URL = f"http://127.0.0.1:{get_proxy_port()}"
 os.environ["HTTP_PROXY"] = PROXY_URL
 os.environ["HTTPS_PROXY"] = PROXY_URL
 os.environ["ALL_PROXY"] = PROXY_URL
