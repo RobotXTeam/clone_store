@@ -425,8 +425,8 @@ def main():
         print(f"👉 即使你立刻断开 SSH，下载也会稳健执行。")
         print(f"🔍 如果你想查看报错/运行日志，请运行命令:")
         print(f"   tail -f {log_file}")
-        print(f"📦 由于后台无终端，进度条会被隐藏。请使用以下命令实时查看已下载的缓存大小:")
-        print(f"   watch -n 2 du -sh {target_dir}/.cache")
+        print(f"📦 由于后台无终端，进度条会被隐藏。请使用以下命令实时查看已下载文件的总大小:")
+        print(f"   watch -n 2 du -sh {target_dir}")
         print("\n再见！👋")
         sys.exit(0)
         
