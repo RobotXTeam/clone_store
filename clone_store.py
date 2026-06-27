@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 import os
+import socket
+import time
 import sys
 import re
 import argparse
@@ -25,6 +27,8 @@ def check_muniu_proxy():
     import urllib.request
     import json
     import os
+import socket
+import time
     import re
     import subprocess
     
@@ -143,18 +147,35 @@ def run_hf_worker(repo_id, files_str, token):
     print(f"[{os.getpid()}] 目标路径: {target_dir}")
     print(f"[{os.getpid()}] ===============================================\n")
     
+    # 设定全局网络超时时间（60秒收不到任何数据包就果断抛出异常，拒绝假死）
+    socket.setdefaulttimeout(60)
+
     for f in files:
         if not f: continue
-        print(f"[{os.getpid()}] ---> 正在下载: {f}")
-        try:
-            downloaded_path = hf_hub_download(
-                repo_id=repo_id,
-                filename=f,
-                local_dir=target_dir
-            )
-            print(f"[{os.getpid()}] ✅ 下载完成: {downloaded_path}")
-        except Exception as e:
-            print(f"[{os.getpid()}] ❌ 下载 {f} 失败: {e}")
+        
+        max_retries = 100 # 允许无限次重试，直到下载成功
+        retries = 0
+        success = False
+        
+        while not success and retries < max_retries:
+            try:
+                if retries == 0:
+                    print(f"[{os.getpid()}] ---> 正在下载: {f}")
+                else:
+                    print(f"[{os.getpid()}] ⚠️ 发生网络中断/假死，正在触发第 {retries} 次自动断点续传: {f}")
+                
+                downloaded_path = hf_hub_download(
+                    repo_id=repo_id,
+                    filename=f,
+                    local_dir=target_dir
+                )
+                print(f"[{os.getpid()}] ✅ 下载完成: {downloaded_path}")
+                success = True
+                
+            except Exception as e:
+                retries += 1
+                print(f"[{os.getpid()}] ❌ 下载 {f} 中断: {e}，等待 3 秒后自动重试...")
+                time.sleep(3)
             
     print(f"\n[{os.getpid()}] 🎉 所有请求的文件下载流程结束！")
 
