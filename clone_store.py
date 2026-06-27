@@ -7,7 +7,8 @@ import re
 import argparse
 import subprocess
 from pathlib import Path
-from huggingface_hub import HfApi, hf_hub_download, login
+from huggingface_hub import HfApi, login, hf_hub_url
+from huggingface_hub.utils import get_session
 
 # ==== 代理强制配置 ====
 PROXY_URL = "http://127.0.0.1:7890"
@@ -153,28 +154,60 @@ def run_hf_worker(repo_id, files_str, token):
     for f in files:
         if not f: continue
         
-        max_retries = 100 # 允许无限次重试，直到下载成功
+        max_retries = 100
         retries = 0
         success = False
         
         while not success and retries < max_retries:
             try:
-                if retries == 0:
-                    print(f"[{os.getpid()}] ---> 正在下载: {f}")
-                else:
-                    print(f"[{os.getpid()}] ⚠️ 发生网络中断/假死，正在触发第 {retries} 次自动断点续传: {f}")
+                import requests
                 
-                downloaded_path = hf_hub_download(
-                    repo_id=repo_id,
-                    filename=f,
-                    local_dir=target_dir
-                )
-                print(f"[{os.getpid()}] ✅ 下载完成: {downloaded_path}")
+                url = hf_hub_url(repo_id=repo_id, filename=f)
+                dest_path = os.path.join(target_dir, f)
+                os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+                tmp_path = dest_path + ".incomplete"
+                
+                if os.path.exists(dest_path):
+                    if retries == 0:
+                        print(f"[{os.getpid()}] ---> 文件已存在，跳过: {f}", flush=True)
+                    success = True
+                    break
+                    
+                downloaded = os.path.getsize(tmp_path) if os.path.exists(tmp_path) else 0
+                
+                if retries == 0 and downloaded == 0:
+                    print(f"[{os.getpid()}] ---> 正在下载: {f}", flush=True)
+                elif downloaded > 0:
+                    print(f"[{os.getpid()}] ---> 继续下载: {f} (已下载 {downloaded/(1024*1024):.2f} MB)", flush=True)
+                    
+                headers = {}
+                if token:
+                    headers["Authorization"] = f"Bearer {token}"
+                if downloaded > 0:
+                    headers["Range"] = f"bytes={downloaded}-"
+                    
+                session = get_session()
+                with session.get(url, headers=headers, stream=True, timeout=(10, 60)) as r:
+                    r.raise_for_status()
+                    
+                    if downloaded > 0 and r.status_code != 206:
+                        downloaded = 0
+                        os.remove(tmp_path)
+                        
+                    mode = "ab" if downloaded > 0 else "wb"
+                    with open(tmp_path, mode) as f_out:
+                        for chunk in r.iter_content(chunk_size=1024*1024):
+                            if chunk:
+                                f_out.write(chunk)
+                                
+                os.rename(tmp_path, dest_path)
+                print(f"[{os.getpid()}] ---> 文件 {f} 下载完成！", flush=True)
                 success = True
                 
             except Exception as e:
                 retries += 1
-                print(f"[{os.getpid()}] ❌ 下载 {f} 中断: {e}，等待 3 秒后自动重试...")
+                downloaded = os.path.getsize(tmp_path) if os.path.exists(tmp_path) else 0
+                print(f"[{os.getpid()}] 网络异常 ({type(e).__name__}: {e})，已下载 {downloaded/(1024*1024):.2f} MB，等待 3 秒重试... ({retries}/{max_retries})", flush=True)
                 time.sleep(3)
             
     print(f"\n[{os.getpid()}] 🎉 所有请求的文件下载流程结束！")
