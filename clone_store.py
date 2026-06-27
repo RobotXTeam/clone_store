@@ -27,8 +27,8 @@ def check_muniu_proxy():
     import urllib.request
     import json
     import os
-import socket
-import time
+    import socket
+    import time
     import re
     import subprocess
     
