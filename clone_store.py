@@ -150,9 +150,7 @@ def run_hf_worker(repo_id, files_str, token):
             downloaded_path = hf_hub_download(
                 repo_id=repo_id,
                 filename=f,
-                local_dir=target_dir,
-                local_dir_use_symlinks=False,
-                resume_download=True
+                local_dir=target_dir
             )
             print(f"[{os.getpid()}] ✅ 下载完成: {downloaded_path}")
         except Exception as e:
