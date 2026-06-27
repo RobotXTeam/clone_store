@@ -8,7 +8,6 @@ import argparse
 import subprocess
 from pathlib import Path
 from huggingface_hub import HfApi, login, hf_hub_url
-from huggingface_hub.utils import get_session
 
 # ==== 代理强制配置 ====
 PROXY_URL = "http://127.0.0.1:7890"
@@ -186,8 +185,7 @@ def run_hf_worker(repo_id, files_str, token):
                 if downloaded > 0:
                     headers["Range"] = f"bytes={downloaded}-"
                     
-                session = get_session()
-                with session.get(url, headers=headers, stream=True, timeout=(10, 60)) as r:
+                with requests.get(url, headers=headers, stream=True, timeout=(10, 60)) as r:
                     r.raise_for_status()
                     
                     if downloaded > 0 and r.status_code != 206:
