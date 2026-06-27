@@ -192,12 +192,19 @@ def run_hf_worker(repo_id, files_str, token):
                         downloaded = 0
                         os.remove(tmp_path)
                         
+                    content_length = r.headers.get('Content-Length')
+                    expected_total_size = downloaded + int(content_length) if content_length else None
+                        
                     mode = "ab" if downloaded > 0 else "wb"
                     with open(tmp_path, mode) as f_out:
                         for chunk in r.iter_content(chunk_size=1024*1024):
                             if chunk:
                                 f_out.write(chunk)
                                 
+                final_size = os.path.getsize(tmp_path)
+                if expected_total_size is not None and final_size != expected_total_size:
+                    raise IOError(f"下载不完整: 期望 {expected_total_size} 字节，实际得到 {final_size} 字节。代理可能断开了连接。")
+                    
                 os.rename(tmp_path, dest_path)
                 print(f"[{os.getpid()}] ---> 文件 {f} 下载完成！", flush=True)
                 success = True
